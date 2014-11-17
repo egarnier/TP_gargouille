@@ -7,6 +7,18 @@
 
 
 //============================================================================
+//                           Structures declarations
+//============================================================================
+// Create a struct of image that contains <width>, <height> and <data>
+typedef struct 
+{
+  int width;
+  int height;
+  u_char* data;
+}image;
+
+
+//============================================================================
 //                           Function declarations
 //============================================================================
 // Write the image contained in <data> (of size <width> * <height>)
