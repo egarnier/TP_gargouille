@@ -35,7 +35,7 @@ void ppm_desaturate(picture* im);
 
 // Shrink image (of original size <width> * <height>) by factor <factor>
 // <width> and <height> are updated accordingly
-void ppm_shrink(u_char** image, int *width, int *height, int factor);
+void ppm_shrink(picture* im, int factor);
 
 
 
@@ -56,43 +56,45 @@ int main(int argc, char* argv[])
   // Create a desaturated (B&W) copy of the image we've just read and
   // write it into "gargouille_BW.ppm"
   //--------------------------------------------------------------------------
-  // Copy image into image_bw
+  // Creation and copy image into image_bw
   picture* gargouille_bw;
   gargouille_bw=(picture*)malloc(sizeof(gargouille_bw));
   gargouille_bw->width  = gargouille->width;
   gargouille_bw->height = gargouille->height;
-  printf("bw width %d bw height %d\n", gargouille_bw->width,gargouille_bw->height);
   gargouille_bw->data = (u_char*) malloc(3 * gargouille->width * gargouille->height * sizeof(*(gargouille_bw->data)));
-  memcpy(gargouille_bw->data, gargouille->data, 3 * gargouille->width * gargouille->height * sizeof(*(gargouille_bw->data)));
+  memcpy(gargouille_bw->data, gargouille->data, 3 * gargouille_bw->width * gargouille_bw->height * sizeof(*(gargouille_bw->data)));
 
   // Desaturate image_bw
-  ppm_desaturate(gargouille);
+  ppm_desaturate(gargouille_bw);
 
   // Write the desaturated image into "gargouille_BW.ppm"
-  ppm_write_to_file(gargouille,"gargouille_BW.ppm");
+  ppm_write_to_file(gargouille_bw,"gargouille_BW.ppm");
 
   // Free the desaturated image
   free(gargouille_bw->data);
   free(gargouille_bw);
 
-  /*//--------------------------------------------------------------------------
+  //--------------------------------------------------------------------------
   // Create a resized copy of the image and
   // write it into "gargouille_small.ppm"
   //--------------------------------------------------------------------------
-  // Copy image into image_small
-  int width_small  = gargouille->width;
-  int height_small = gargouille->height;
-  u_char* image_small = (u_char*) malloc(3 * width_small * height_small * sizeof(*image_small));
-  memcpy(image_small, gargouille->data, 3 * width_small * height_small * sizeof(*image_small));
+  // Creation and copy image into image_small
+  picture* gargouille_small;
+  gargouille_small=(picture*)malloc(sizeof(gargouille_small));
+  gargouille_small->width  = gargouille->width;
+  gargouille_small->height = gargouille->height;
+  gargouille_small->data = (u_char*) malloc(3 * gargouille->width * gargouille->height * sizeof(*(gargouille_small->data)));
+  memcpy(gargouille_small->data, gargouille->data, 3 * gargouille_small->width * gargouille_small->height * sizeof(*(gargouille_small->data)));
 
   // Shrink image_small size 2-fold
-  ppm_shrink(&image_small, &width_small, &height_small, 2);
+  ppm_shrink(gargouille_small, 2);
 
   // Write the desaturated image into "gargouille_small.ppm"
-  ppm_write_to_file(gargouille, "gargouille_small.ppm");*/
+  ppm_write_to_file(gargouille_small, "gargouille_small.ppm");
 
   // Free the not yet freed images
-
+  free(gargouille_small->data);
+  free(gargouille_small);
   free(gargouille->data);
   free(gargouille);
 
@@ -163,11 +165,11 @@ void ppm_desaturate(picture* im)
   }
 }
 
-void ppm_shrink(u_char** image, int *width, int *height, int factor)
+void ppm_shrink(picture* im, int factor)
 {
   // Compute new image size and allocate memory for the new image
-  int new_width   = (*width) / factor;
-  int new_height  = (*height) / factor;
+  int new_width   = im->width / factor;
+  int new_height  = im->height / factor;
   u_char* new_image = (u_char*) malloc(3 * new_width * new_height * sizeof(*new_image));
 
   // Precompute factor^2 (for performance reasons)
@@ -191,7 +193,7 @@ void ppm_shrink(u_char** image, int *width, int *height, int factor)
       // model image corresponding to the pixel we are creating
       int x0 = x * factor;
       int y0 = y * factor;
-      int i0 = 3 * (y0 * (*width) + x0);
+      int i0 = 3 * (y0 * im->width + x0);
 
       // Compute RGB values for the new pixel
       int dx, dy;
@@ -201,12 +203,12 @@ void ppm_shrink(u_char** image, int *width, int *height, int factor)
         {
           // Compute the offset of the current pixel (in the model image)
           // with regard to the top-left pixel of the current "set of pixels"
-          int delta_i = 3 * (dy * (*width) + dx);
+          int delta_i = 3 * (dy * im->width + dx);
 
           // Accumulate RGB values
-          red   += (*image)[i0+delta_i];
-          green += (*image)[i0+delta_i+1];
-          blue  += (*image)[i0+delta_i+2];
+          red   += im->data[i0+delta_i];
+          green += im->data[i0+delta_i+1];
+          blue  += im->data[i0+delta_i+2];
         }
       }
 
@@ -223,12 +225,12 @@ void ppm_shrink(u_char** image, int *width, int *height, int factor)
   }
 
   // Update image size
-  *width  = new_width;
-  *height = new_height;
+  im->width  = new_width;
+  im->height = new_height;
 
   // Update image
-  free(*image);
-  *image = new_image;
+  free(im->data);
+  im->data = new_image;
 }
 
 
