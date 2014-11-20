@@ -9,47 +9,80 @@
 //============================================================================
 //                           Function definitions
 //============================================================================
-void ppm_write_to_file(picture* im, char* name)
+// Getters
+int picture::GetWidth(void) const
+{
+  return width;
+}
+
+int picture::GetHeight(void) const
+{
+  return height;
+}
+
+u_char* picture::GetData(void) const
+{
+  return data;
+}
+
+// Constructor
+picture::picture(void)
+{
+  width=0;
+  height=0;
+  data=new u_char[1];
+}
+
+picture::picture(const picture& im)
+{
+  width=im.GetWidth();
+  height=im.GetHeight();
+  data = new u_char[3 * width * height];
+  memcpy(data, im.GetData(), 3 * width * height * sizeof(*data));
+}
+
+// Functions
+void picture::ppm_write_to_file(const char* name)
 {
   // Create file 
   FILE* ppm_tmp=fopen(name,"wb");
-
+  
   // Write header
-  fprintf(ppm_tmp, "P6\n%d %d\n255\n", im->width, im->height);
+  fprintf(ppm_tmp, "P6\n%d %d\n255\n", width, height);
 
   // Write pixels
-  fwrite(im->data, 3, im->width * im->height, ppm_tmp);
+  fwrite(data, 3, width * height, ppm_tmp);
 
   // Close file
   fclose(ppm_tmp);
 }
 
-void ppm_read_from_file(picture* im, char* name)
+void picture::ppm_read_from_file(const char* name)
 {
   // Create file
   FILE* ppm_tmp=fopen(name,"rb");
 
   // Read file header
-  fscanf(ppm_tmp, "P6\n%d %d\n255\n", &(im->width), &(im->height));
+  fscanf(ppm_tmp, "P6\n%d %d\n255\n", &width, &height);
 
   // Allocate memory according to width and height
-  im->data = (u_char*) malloc(3 * im->width * im->height * sizeof(*(im->data)));
+  data = (u_char*) malloc(3 * width * height * sizeof(*data));
 
   // Read the actual image data
-  fread(im->data, 3, im->width * im->height, ppm_tmp);
+  fread(data, 3, width * height, ppm_tmp);
 
   // Close file
   fclose(ppm_tmp);
 }
 
-void ppm_desaturate(picture* im)
+void picture::ppm_desaturate()
 {
   int x, y;
 
   // For each pixel ...
-  for (x = 0 ; x < im->width ; x++)
+  for (x = 0 ; x < width ; x++)
   {
-    for (y = 0 ; y < im->height ; y++)
+    for (y = 0 ; y < height ; y++)
     {
       u_int grey_lvl = 0;
       int rgb_canal;
@@ -57,23 +90,23 @@ void ppm_desaturate(picture* im)
       // Compute the grey level
       for (rgb_canal = 0 ; rgb_canal < 3 ; rgb_canal++)
       {
-        grey_lvl += im->data[ 3 * (y * im->width + x) + rgb_canal ];
+        grey_lvl += data[ 3 * (y * width + x) + rgb_canal ];
       }
       grey_lvl /= 3;
       assert(grey_lvl >= 0 && grey_lvl <=255);
 
       // Set the corresponding pixel's value in new_image
-      memset(&(im->data[3 * (y * im->width + x)]), grey_lvl, 3);
+      memset(&data[3 * (y * width + x)], grey_lvl, 3);
     }
   }
 }
 
-void ppm_shrink(picture* im, int factor)
+void picture::ppm_shrink(int factor)
 {
   // Compute new image size and allocate memory for the new image
-  int new_width   = im->width / factor;
-  int new_height  = im->height / factor;
-  u_char* new_image = (u_char*) malloc(3 * new_width * new_height * sizeof(*new_image));
+  int new_width   = width / factor;
+  int new_height  = height / factor;
+  u_char* new_image = new u_char[3 * new_width * new_height];
 
   // Precompute factor^2 (for performance reasons)
   int factor_squared = factor * factor;
@@ -96,7 +129,7 @@ void ppm_shrink(picture* im, int factor)
       // model image corresponding to the pixel we are creating
       int x0 = x * factor;
       int y0 = y * factor;
-      int i0 = 3 * (y0 * im->width + x0);
+      int i0 = 3 * (y0 * width + x0);
 
       // Compute RGB values for the new pixel
       int dx, dy;
@@ -106,12 +139,12 @@ void ppm_shrink(picture* im, int factor)
         {
           // Compute the offset of the current pixel (in the model image)
           // with regard to the top-left pixel of the current "set of pixels"
-          int delta_i = 3 * (dy * im->width + dx);
+          int delta_i = 3 * (dy * width + dx);
 
           // Accumulate RGB values
-          red   += im->data[i0+delta_i];
-          green += im->data[i0+delta_i+1];
-          blue  += im->data[i0+delta_i+2];
+          red   += data[i0+delta_i];
+          green += data[i0+delta_i+1];
+          blue  += data[i0+delta_i+2];
         }
       }
 
@@ -128,10 +161,10 @@ void ppm_shrink(picture* im, int factor)
   }
 
   // Update image size
-  im->width  = new_width;
-  im->height = new_height;
+  width  = new_width;
+  height = new_height;
 
   // Update image
-  free(im->data);
-  im->data = new_image;
+  delete(data);
+  data = new_image;
 }
