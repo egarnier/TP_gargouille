@@ -1,11 +1,11 @@
 
 all: ppm
 
-ppm: ppm.c picture.o
-	g++ -Wall -o ppm ppm.c picture.o
+ppm: ppm.cpp picture.o
+	g++ -Wall -o ppm ppm.cpp picture.o
 
-picture.o: picture.h picture.c
-	g++ -Wall -c -o picture.o picture.c
+picture.o: picture.h picture.cpp
+	g++ -Wall -c -o picture.o picture.cpp
 
 clean :
 	rm *.o
